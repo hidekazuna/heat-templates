@@ -1,0 +1,10 @@
+- name: wp install
+  connection: local
+  hosts: localhost
+  sudo: yes
+
+  tasks:
+  - name: install packages
+    apt: pkg={{ item }} update_cache=yes cache_valid_time=3600 force=yes
+    with_items:
+      - apache2

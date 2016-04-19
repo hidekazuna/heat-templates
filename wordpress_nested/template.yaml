@@ -1,0 +1,104 @@
+heat_template_version: 2013-05-23
+
+description: >
+  Heat WordPress template to deploy WordPress on two instances using Heat's
+  software orchestration feature.
+  This template has been tested to work on Heat Mitaka using neutron network
+  and using a Ubuntu 14.04 image.
+
+parameters:
+  key_name:
+    type: string
+    description: Name of a key pair to enable SSH access to instances.
+    default: default
+  flavor:
+    type: string
+    description: Flavor to use for the WordPress server.
+    constraints:
+      - custom_constraint: nova.flavor
+  image:
+    type: string
+    description: >
+      Name or ID of the image to use for the WordPress server.
+    default: ubuntu_software_config
+  db_name:
+    type: string
+    description: WordPress database name
+    default: wordpress
+    constraints:
+      - length: { min: 1, max: 64 }
+        description: db_name must be between 1 and 64 characters
+      - allowed_pattern: '[a-zA-Z][a-zA-Z0-9]*'
+        description: >
+          db_name must begin with a letter and contain only alphanumeric
+          characters
+  db_username:
+    type: string
+    description: The WordPress database admin account username
+    default: admin
+    hidden: true
+    constraints:
+      - length: { min: 1, max: 16 }
+        description: db_username must be between 1 and 64 characters
+      - allowed_pattern: '[a-zA-Z][a-zA-Z0-9]*'
+        description: >
+          db_username must begin with a letter and contain only alphanumeric
+          characters
+  db_password:
+    type: string
+    description: WordPress database password
+    default: wordpress
+    constraints:
+      - length: { min: 1, max: 64 }
+        description: db_name must be between 1 and 64 characters
+      - allowed_pattern: '[a-zA-Z][a-zA-Z0-9]*'
+        description: >
+          db_password must begin with a letter and contain only alphanumeric
+          characters
+  db_rootpassword:
+    type: string
+    description: database root password
+    default: root
+    constraints:
+      - length: { min: 1, max: 64 }
+        description: db_name must be between 1 and 64 characters
+      - allowed_pattern: '[a-zA-Z][a-zA-Z0-9]*'
+        description: >
+          db_rootpassword must begin with a letter and contain only alphanumeric
+          characters
+
+
+resources:
+
+  wordpress:
+    type: wordpress.yaml
+    properties:
+      image: {get_param: image}
+      flavor: {get_param: flavor}
+      key_name: {get_param: key_name}
+      db_name: {get_param: db_name}
+      db_username: {get_param: db_username}
+      db_password: {get_param: db_password}
+      db_rootpassword: {get_param: db_rootpassword}
+      db_ipaddr: {get_attr: [database, ip]}
+
+  database:
+    type: database.yaml
+    properties:
+      image: {get_param: image}
+      flavor: {get_param: flavor}
+      key_name: {get_param: key_name}
+      db_name: {get_param: db_name}
+      db_username: {get_param: db_username}
+      db_password: {get_param: db_password}
+      db_rootpassword: {get_param: db_rootpassword}
+#      db_ipaddr: db_ipaddr
+
+outputs:
+  WebsiteURL:
+    description: URL for Wordpress wiki
+    value:
+      str_replace:
+        template: http://host/wordpress
+        params:
+          host: { get_attr: [wordpress, resource.webserver_instance, networks, private, 0] }
