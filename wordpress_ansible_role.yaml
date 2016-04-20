@@ -1,0 +1,85 @@
+heat_template_version: 2014-10-16
+
+description: |
+  Deploy Wordpress server with Ansible
+parameters:
+  image:
+    type: string
+  key_name:
+    type: string
+    default: demo
+
+resources:
+  server_pw:
+    type: OS::Heat::RandomString
+
+  pull_role_config:
+    type: OS::Heat::SoftwareConfig
+    properties:
+      group: script
+      config: |
+        #!/bin/bash
+        git clone https://github.com/hidekazuna/ansible-playbooks.git
+        mkdir /var/lib/heat-config/heat-config-ansible
+        cp -r ansible-playbooks/wordpress/* /var/lib/heat-config/heat-config-ansible
+
+  wordpress_config:
+    type: OS::Heat::SoftwareConfig
+    properties:
+      group: ansible
+      config: |
+        - hosts: localhost
+          connection: local
+          roles:
+            - mysql
+            - apache
+            - wordpress
+
+  deploy_role:
+    type: OS::Heat::SoftwareDeployment
+    properties:
+      config:
+        get_resource: pull_role_config
+      server:
+        get_resource: server
+
+  deploy_wordpress:
+    type: OS::Heat::SoftwareDeployment
+    depends_on: deploy_role
+    properties:
+      config:
+        get_resource: wordpress_config
+      server:
+        get_resource: server
+
+  server:
+    type: OS::Nova::Server
+    properties:
+      image: { get_param: image }
+      admin_pass: { get_attr: [ server_pw, value ] }
+      flavor: m1.small
+      key_name: {get_param: key_name }
+      user_data_format: SOFTWARE_CONFIG
+
+outputs:
+  stdout:
+    description: Ansible Output
+    value:
+      get_attr: [ deploy_wordpress,  deploy_stdout ]
+  stderr:
+    description: Ansible Error output
+    value:
+      get_attr: [ deploy_wordpress, deploy_stderr ]
+  status_code:
+    description: Exit Code
+    value:
+      get_attr: [ deploy_wordpress, deploy_status_code ]
+  server_password:
+    description: Server Password
+    value:
+      get_attr: [ server_pw, value ]
+  role_status_code:
+    description: exit code role
+    value:
+      get_attr: [ deploy_role, deploy_status_code ]
+
