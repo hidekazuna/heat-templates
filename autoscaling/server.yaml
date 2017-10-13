@@ -1,0 +1,36 @@
+heat_template_version: 2017-02-24
+
+description: >
+  My server template
+
+parameters:
+  flavor:
+    type: string
+    description: Flavor for the instances to be created
+    default: none
+    constraints:
+      - custom_constraint: nova.flavor
+        description: Must be a flavor known to Nova
+
+  image:
+    type: string
+    description: >
+      Name or ID of the image to use for the instances.
+    default: none
+    constraints:
+      - custom_constraint: glance.image
+        description: Must identify an image known to Glance
+
+  network:
+    type: string
+    description: The network for the VM
+    default: private
+
+resources:
+  server:
+    type: OS::Nova::Server
+    properties:
+      image: {get_param: image}
+      flavor: {get_param: flavor}
+      networks:
+        - network: {get_param: network}
